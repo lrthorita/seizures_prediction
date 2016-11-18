@@ -1,0 +1,37 @@
+# seizures_prediction
+
+
+Dicas de métodos que podem ajudar
+=================================
+
+1. Fourier Transfor
+	- 16 canais
+		- para cada canal
+			- FFT (Fast Fourier Transform)
+			- coeficientes complexos
+			- comprimento desses vetores
+				-> relevância (energia) de cada senoidal que compõe o sinal
+			- aplicar um conjunto de filtros de frequência
+				-> [a,b] -> manter e zerar as demais
+				-> voltar para o sinal
+			- Medidas
+				DTW
+				Distância Euclideana (* Não é muito boa para este problema)
+				CCF (Cross-Correlation Function)
+					-> gera 1 matriz de correlação para cada canal em relação às demais
+			- Classificação
+
+2. Short-Time Fourier Transform
+	- 16 canais
+		- para cada canal
+			- quebrar em janelas
+				- FFT em cada janela
+					- amplitudes (frequências em 10 faixas)
+					- vetor coluna
+					- concatenar um vetor após o outro
+						-> gera uma matriz de 10 linhas x ? colunas para cada canal
+
+3. Wavelets
+	- 16 canais
+		- para cada canal
+			- ondaleta (haar, daubechies)
