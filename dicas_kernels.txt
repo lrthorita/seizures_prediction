@@ -1,4 +1,19 @@
 # seizures_prediction
+Melbourne University AES/MathWorks/NIH Seizure Prediction
+<https://www.kaggle.com/c/melbourne-university-seizure-prediction>
+
+Dataset
+- 10 minutes samples
+- 400 Hz of sampling frequency
+- 16 channels (sensors)
+
+Good references:
+- Brain Wave Basics – What You Need to Know about States of Consciousness
+	http://thoughtmedicine.com/2011/06/brain-wave-basics-what-you-need-to-know-about-states-of-consciousness/
+	- Interesting frequency range: 8-30 Hz (the range where there are beta, alpha and mu waves)
+		- beta waves: 13-30 Hz
+		- alpha waves: 8-13 Hz
+		- mu waves: 8-13 Hz
 
 
 Dicas de métodos que podem ajudar
