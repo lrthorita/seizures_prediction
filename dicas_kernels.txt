@@ -16,23 +16,24 @@ Good references:
 		- mu waves: 8-13 Hz
 
 
+
 Hints of methods that can help
 ==============================
 1. Fourier Transform
-	- for each channel
-		- FFT (Fast Fourier Transform)
-		- Complex coefficients
-		- Length of these vectors
-			-> Energy of each sinusoidal that forms the signal
-		- Apply frequency filters
-			-> [a,b] -> set to zero all the irrelevant frequencies
-			-> get the new signal
-		- Measurements
-			DTW
-			Euclidean distance (*P.S.: This technique is not good for this problem)
-			CCF (Cross-Correlation Function)
-				-> creates one correlation matrix for each channel in relation to the others
-		- Classification
+        - for each channel
+                - FFT (Fast Fourier Transform)
+                - Complex coefficients
+                - Length of these vectors
+                        -> Energy of each sinusoidal that forms the signal
+                - Apply frequency filters
+                        -> [a,b] -> set to zero all the irrelevant frequencies
+                        -> get the new signal
+                - Measurements
+                        DTW
+                        Euclidean distance (*P.S.: This technique is not good for this problem)
+                        CCF (Cross-Correlation Function)
+                                -> creates one correlation matrix for each channel in relation to the others
+                - Classification
 
 
 2. Short-Time Fourier Transform
