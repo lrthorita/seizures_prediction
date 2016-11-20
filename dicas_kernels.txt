@@ -16,37 +16,34 @@ Good references:
 		- mu waves: 8-13 Hz
 
 
-Dicas de métodos que podem ajudar
-=================================
+Hints of methods that can help
+==============================
+1. Fourier Transform
+	- for each channel
+		- FFT (Fast Fourier Transform)
+		- Complex coefficients
+		- Length of these vectors
+			-> Energy of each sinusoidal that forms the signal
+		- Apply frequency filters
+			-> [a,b] -> set to zero all the irrelevant frequencies
+			-> get the new signal
+		- Measurements
+			DTW
+			Euclidean distance (*P.S.: This technique is not good for this problem)
+			CCF (Cross-Correlation Function)
+				-> creates one correlation matrix for each channel in relation to the others
+		- Classification
 
-1. Fourier Transfor
-	- 16 canais
-		- para cada canal
-			- FFT (Fast Fourier Transform)
-			- coeficientes complexos
-			- comprimento desses vetores
-				-> relevância (energia) de cada senoidal que compõe o sinal
-			- aplicar um conjunto de filtros de frequência
-				-> [a,b] -> manter e zerar as demais
-				-> voltar para o sinal
-			- Medidas
-				DTW
-				Distância Euclideana (* Não é muito boa para este problema)
-				CCF (Cross-Correlation Function)
-					-> gera 1 matriz de correlação para cada canal em relação às demais
-			- Classificação
 
 2. Short-Time Fourier Transform
-	- 16 canais
-		- para cada canal
-			- quebrar em janelas
-				- FFT em cada janela
-					- amplitudes (frequências em 10 faixas)
-					- vetor coluna
-					- concatenar um vetor após o outro
-						-> gera uma matriz de 10 linhas x ? colunas para cada canal
+	- for each channel
+		- divide in blocks
+			- FFT in each of these blocks
+				- Amplitude (10 bins of frequencies)
+				- Column vector
+				- Concatenate one vector after another
+					-> creates a matrix (10x?) for each channel
 
 3. Wavelets
-	- 16 canais
-		- para cada canal
-			- ondaleta (haar, daubechies)
+	- for each channel
+		- wavelet (haar, daubechies)
