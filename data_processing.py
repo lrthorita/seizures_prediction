@@ -8,6 +8,7 @@
 import numpy as np
 import scipy.io
 import os
+from sklearn.externals import joblib
 
 # Global constants
 IEEG_SAMPLING_RATE = 400
@@ -17,7 +18,7 @@ N_SAMPLES_SEGMENT = 240000
 
 def load_matdata(filename):
     """Take the mat file and convert it in a dictionary variable with the 
-    following keys: data, iEEsamplingRate, nSamplesSegment, channelIndices."""
+    following keys: data, label (if it is a training data)."""
     matdata = scipy.io.loadmat(filename)
     dataStruct = matdata['dataStruct']
     data = {}
@@ -56,6 +57,19 @@ def get_feature(data):
 
 
 def get_train_dataset():
+    """Get all the training dataset and return it as a dictionary of all the 
+    examples and labels. It will return a dictionary with dictionaries as
+    elements. Each element corresponds to a unique .mat file. So, the structure
+    of the returned variable is as follows:
+        train_dataset
+            | ['1_1_0.mat']
+            |              |_ ['data']
+            |_             |_ ['label']
+            | [1_1_1.mat']
+            |              |_ ['data']
+            |_             |_ ['label']
+            ...
+    """
     train_dataset = {}
     for i in xrange(1,3):
         directory = '../Seizures_Dataset/train_%s/' % i
@@ -68,6 +82,12 @@ def get_train_dataset():
                 print "The file " + list_files[j] + " is corrupted."
                 continue
             if j%100 == 0: print j
+    
+    # Save the dataset
+    filename = joblib.dump(train_dataset,'train_dataset.pkl')
+    print "The training dataset was saved as: " + filename
+    # Use the following command to load the training dataset:
+    """    classifier2_2 = joblib.load('classifier.pkl')    """
     return train_dataset
 
 
