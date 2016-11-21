@@ -3,9 +3,32 @@ Melbourne University AES/MathWorks/NIH Seizure Prediction
 <https://www.kaggle.com/c/melbourne-university-seizure-prediction>
 
 Dataset
+=======
 - 10 minutes samples
 - 400 Hz of sampling frequency
 - 16 channels (sensors)
+				=> Each data has 400*60*10 = 240,000 measurements for each channel
+
+Data Structure
+==============
+- I_J_K.mat -> the J-th training data segment corresponding to the K-th class (K=0 for interictal, K=1 for preictal)
+	       for the I-th patient (there are three patients).
+- I_J.mat   -> the J-th testing data segment for the I-th patient.
+
+Each .mat file contains a data structure, dataStruct, with fields as follows:
+- data:
+	A matrix of iEEG sample values arranged row x column as time sample x electrode.
+- nSamplesSegment:
+	Total number of time samples (number of rows in the data field).
+- iEEGsamplingRate:
+	Data sampling rate, i.e. the number of data samples representing 1 second of EEG data.
+- channelIndices:
+	An array of the electrode indexes corresponding to the columns in the data field.
+- sequence: 
+	The index of the data segment within the one hour series of clips. For example, 1_12_1.mat
+	has a sequence number of 6, and represents the iEEG data from 50 to 60 minutes into the preictal data.
+	This field only appears in training data.
+
 
 Good references:
 - Brain Wave Basics – What You Need to Know about States of Consciousness
