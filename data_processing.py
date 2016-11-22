@@ -72,12 +72,12 @@ def get_train_dataset():
             |_             |_ ['label']
             ...
     """
-    fft_train_dataset = {}
-    for i in xrange(1,4):
+    for i in xrange(2,3):
+        fft_train_dataset = {}
         directory = '../Seizures_Dataset/train_%s/' % i
         list_files = os.listdir(directory)
         for j in xrange(len(list_files)):
-#        for j in xrange(100):
+#        for j in xrange(1550,1600):
             path = directory + list_files[j]
             try:
                 data = load_matdata(path)
@@ -91,13 +91,15 @@ def get_train_dataset():
                 print "The file " + list_files[j] + " is corrupted."
                 continue
             if j%50 == 0: print j
-    fft_train_dataset['frequency'] = fft_feature['frequency']
+#            print j
+            fft_train_dataset['frequency'] = fft_feature['frequency']
     
-    # Save the dataset
-    filename = joblib.dump(fft_train_dataset,'fft_train_dataset.pkl')
-    print "The training dataset was saved as: " + filename[0]
-    # Use the following command to load the training dataset:
-    """    joblib.load('fft_train_dataset.pkl')    """
+        # Save the dataset
+        filename = 'fft_train_dataset%s.pkl' % i
+        filename = joblib.dump(fft_train_dataset,filename)
+        print "The training dataset was saved as: " + filename[0]
+        # Use the following command to load the training dataset:
+        """    joblib.load('fft_train_dataset.pkl')    """
     return fft_train_dataset
 
 
