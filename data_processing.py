@@ -46,7 +46,7 @@ def get_feature(data):
     These waves are the waves that can, possibly, advise a future seizure 
     event. The frequency range is between 8 Hz and 30 Hz."""
     lower_index = np.int(8 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
-    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
+    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
 
     fft_data, frequencies = get_fft(data)
 
@@ -73,37 +73,35 @@ def get_train_dataset():
             ...
     """
     fft_train_dataset = {}
-    for i in xrange(1,2):
+    for i in xrange(1,4):
         directory = '../Seizures_Dataset/train_%s/' % i
         list_files = os.listdir(directory)
-        for j in xrange(len(list_files)
+        for j in xrange(len(list_files)):
+#        for j in xrange(100):
             path = directory + list_files[j]
             try:
                 data = load_matdata(path)
                 fft_feature = get_feature(data)
                 fft_train_dataset[list_files[j]] = {
                                     'energy': fft_feature['energy'],
-                                    'frequency': fft_feature['frequency'],
                                     'label': data['label']}
+            except KeyboardInterrupt:
+                break
             except:
                 print "The file " + list_files[j] + " is corrupted."
                 continue
-            if j%100 == 0: print j
+            if j%50 == 0: print j
+    fft_train_dataset['frequency'] = fft_feature['frequency']
     
     # Save the dataset
-    filename = joblib.dump(train_dataset,'train_dataset.pkl')
+    filename = joblib.dump(fft_train_dataset,'fft_train_dataset.pkl')
     print "The training dataset was saved as: " + filename[0]
     # Use the following command to load the training dataset:
-    """    classifier2_2 = joblib.load('classifier.pkl')    """
-    return train_dataset
+    """    joblib.load('fft_train_dataset.pkl')    """
+    return fft_train_dataset
 
 
 # ================================ MAIN ================================== #
 train_dataset = get_train_dataset()
-
-
-
-
-
 
 
