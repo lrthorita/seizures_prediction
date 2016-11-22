@@ -35,28 +35,48 @@ def load_matdata(filename):
 def get_fft(data):
     """Compute the Fast Fourier Transform on the signal of each channel of the
     data, and return the histogram of frequencies energy."""
-    fft_data = abs(np.fft.fft(data['data'],axis=0))/(N_SAMPLES_SEGMENT/2)
+    fft_data = np.fft.fft(data['data'],axis=0)
     frequencies = np.fft.fftfreq(N_SAMPLES_SEGMENT,SAMPLING_PERIOD)
 
     return fft_data, frequencies
 
 
-def get_feature(data):
-    """Get the frequency range where alpha, beta and mu waves are situated.
-    These waves are the waves that can, possibly, advise a future seizure 
-    event. The frequency range is between 8 Hz and 30 Hz."""
-    lower_index = np.int(8 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
-    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
+#def get_feature(data):
+#    """Get the frequency range where alpha, beta and mu waves are situated.
+#    These waves are the waves that can, possibly, advise a future seizure 
+#    event. The frequency range is between 8 Hz and 30 Hz."""
+#    lower_index = np.int(8 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
+#    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
+#
+#    fft_data, frequencies = get_fft(data)
+#
+#    freq_range = frequencies[lower_index:higher_index]
+#    energy_range = fft_data[lower_index:higher_index]
+#
+#    fft_feature = {'frequency':freq_range, 'energy':energy_range}
+#
+#    return fft_feature
 
+def get_and_filter_fft(data):
+    """Apply a band-pass filter in the range where alpha, beta and mu waves are
+    situated. These waves are the waves that can, possibly, advise a future 
+    seizure event. The frequency range is between 8 Hz and 30 Hz."""
     fft_data, frequencies = get_fft(data)
 
-    freq_range = frequencies[lower_index:higher_index]
-    energy_range = fft_data[lower_index:higher_index]
+    for i in xrange(len(frequencies)):
+        freq = frequencies[i]
+        if (freq < -30) or ((freq > -8) and (freq < 8)) or (freq > 30):
+            fft_data[i] = 0
+    
+    return fft_data, frequencies
 
-    fft_feature = {'frequency':freq_range, 'energy':energy_range}
 
-    return fft_feature
-
+def get_inverse_fft(fft_data):
+    """Recover the signal by applying the inverse Fourier Transform on the
+    fft_data."""
+    filtered_data = np.fft.ifft(fft_data,axis=0)
+    return filtered_data
+    
 
 def get_train_dataset():
     """Get all the training dataset and return it as a dictionary of all the 
@@ -104,6 +124,6 @@ def get_train_dataset():
 
 
 # ================================ MAIN ================================== #
-train_dataset = get_train_dataset()
+#train_dataset = get_train_dataset()
 
 
