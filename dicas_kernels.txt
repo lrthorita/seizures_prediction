@@ -31,6 +31,16 @@ Each .mat file contains a data structure, dataStruct, with fields as follows:
 
 
 Good references:
+- Melbourne University AES/MathWorks/NIH Seizure Prediction - Get the Data
+	https://www.kaggle.com/c/melbourne-university-seizure-prediction/data
+	- The temporal dynamics of brain activity can be classified into 4 states:
+		- Interictal (between seizures, or baseline)
+		- Preictal (prior to seizure)
+		- Ictal (seizure)
+		- Post-ictal (after seizure)
+	- Seizure forecasting:
+		- Reliably identify a Preictal state
+	
 - Brain Wave Basics – What You Need to Know about States of Consciousness
 	http://thoughtmedicine.com/2011/06/brain-wave-basics-what-you-need-to-know-about-states-of-consciousness/
 	- Interesting frequency range: 8-30 Hz (the range where there are beta, alpha and mu waves)
