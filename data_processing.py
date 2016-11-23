@@ -47,11 +47,102 @@ def get_and_filter_fft(data):
     return fft_data, frequencies
 
 
+def get_feature(data):
+    """Get the frequency range where alpha, beta and mu waves are situated.
+    These waves are the waves that can, possibly, advise a future seizure 
+    event. The frequency range is between 8 Hz and 30 Hz."""
+    lower_index = np.int(8 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
+    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
+
+    fft_data, frequencies = get_fft(data)
+
+    freq_range = frequencies[lower_index:higher_index]
+    energy_range = fft_data[lower_index:higher_index]
+
+    fft_feature = {'frequency':freq_range, 'energy':energy_range}
+
+    return fft_feature
+
+
 def get_inverse_fft(fft_data):
     """Recover the signal by applying the inverse Fourier Transform on the
     fft_data."""
     filtered_data = np.fft.ifft(fft_data,axis=0)
     return filtered_data.real
+
+
+def fft_train_cross_correlation():
+    """Compute the cross-correlation function for all the fft training dataset,
+    creating 16 correlation matrices. It returns a dictionary with keys as
+    'channel_i', where i is the channel number (1 to 16), and the respective
+    correlation matrix."""
+    datas = np.loadtxt('../Seizures_Dataset/train_and_test_data_labels_safe.csv',
+                       dtype='str', delimiter=',', skiprows=1, usecols=(0,1))
+    datas = datas[0:N_TRAINING_SAMPLES,:] # Eliminate the test datas
+    fft_train_xcorr = {}
+    corrupted_list = []
+    for c in xrange(16):
+        key = "channel_%s" % (c+1)
+        fft_train_xcorr[key] = np.zeros((3,3))
+    
+    for i in xrange(3):
+        if corrupted_list.count(i) == 0:
+            # File not corrupted
+            corrupted_i = False
+            
+            # Load the i-th sample
+            file_dir = "../Seizures_Dataset/train_%s/" % datas[i,0][0]
+            file_path = file_dir + datas[i,0]
+            try:
+                sample_i = load_matdata(file_path)
+                # Get spectrum in the range 8-30 Hz
+                fft_feature_i = get_feature(sample_i)
+                feature_i = abs(fft_feature_i['energy'])/N_SAMPLES_SEGMENT
+            except KeyboardInterrupt:
+                print "Interrupted!"
+                break
+            except:
+                print "The file " + datas[i,0] + " is corrupted."
+                # The file must be corrupted
+                corrupted_i = True
+                corrupted_list.append(i)
+                continue
+            
+            if corrupted_i == False: # Check if the i-th file is corrupted
+                for j in xrange(i,3):
+                    if corrupted_list.count(j) == 0:
+                        # Load the j-th sample
+                        file_dir = "../Seizures_Dataset/train_%s/" % datas[j,0][0]
+                        file_path = file_dir + datas[j,0]
+                        try:
+                            sample_j = load_matdata(file_path)
+                            # Get spectrum in the range 8-30 Hz
+                            fft_feature_j = get_feature(sample_j)
+                            feature_j = abs(fft_feature_j['energy'])/N_SAMPLES_SEGMENT
+                            
+                            for c in xrange(16):
+                                key = "channel_%s" % (c+1)
+                                # Correlation between the i-th sample and the j-th sample
+                                print key + " - Correlation between:"
+                                print str(i)+"-th sample: " + datas[i,0]
+                                print str(j)+"-th sample: " + datas[j,0] + "\n"
+                                corr = np.correlate(feature_i[:,c],
+                                                    feature_j[:,c])
+                                # The cross-correlation matrix is symmetric
+                                fft_train_xcorr[key][i,j] = corr[0]
+                                fft_train_xcorr[key][j,i] = corr[0]
+                        except KeyboardInterrupt:
+                            print "Interrupted!"
+                            break
+                        except:
+                            print "The file " + datas[j,0] + " is corrupted."
+                            corrupted_list.append(j)
+                            continue
+            
+    # Save the cross-correlation matrices
+    joblib.dump(fft_train_xcorr,'fft_train_xcorr.pkl')
+    
+    return fft_train_xcorr
 
 
 def train_cross_correlation():
@@ -64,76 +155,73 @@ def train_cross_correlation():
     datas = datas[0:N_TRAINING_SAMPLES,:] # Eliminate the test datas
     train_xcorr = {}
     corrupted_list = []
-    try:
-        for c in xrange(16):
-            key = "channel_%s" % (c+1)
-            train_xcorr[key] = np.zeros((N_TRAINING_SAMPLES,N_TRAINING_SAMPLES))
-            x = y = 0
-            for i in xrange(N_TRAINING_SAMPLES):
-                if corrupted_list.count(i) == 0:
-                    # File not corrupted
-                    corrupted_i = False
-                    
-                    # Load the i-th sample
-                    file_dir = "../Seizures_Dataset/train_%s/" % datas[i,0][0]
-                    file_path = file_dir + datas[i,0]
-                    try:
-                        sample_i = load_matdata(file_path)
-                        # Band-pass filter (8-30 Hz)
-                        fft_sample_i, freq_sample_i = get_and_filter_fft(sample_i)
-                        filtered_sample_i = get_inverse_fft(fft_sample_i)
-                    except KeyboardInterrupt:
-                        print "Interrupted!"
-                        break
-                    except:
-                        print "The file " + datas[i,0] + " is corrupted."
-                        # The file must be corrupted
-                        corrupted_i = True
-                        corrupted_list.append(i)
-                        x = x - 1
-                        continue
-                    
-                    if corrupted_i == False: # Check if the i-th file is corrupted
-                        for j in xrange(i,N_TRAINING_SAMPLES):
-                            if corrupted_list.count(j) == 0:
-                                # Load the j-th sample
-                                file_dir = "../Seizures_Dataset/train_%s/" % datas[j,0][0]
-                                file_path = file_dir + datas[j,0]
-                                try:
-                                    sample_j = load_matdata(file_path)
-                                    # Band-pass filter (8-30 Hz)
-                                    fft_sample_j, freq_sample_j = get_and_filter_fft(sample_j)
-                                    filtered_sample_j = get_inverse_fft(fft_sample_j)
-                                    
-                                    # Correlation between the i-th sample and the j-th sample
-                                    print "Correlation between:"
-                                    print str(i)+"-th sample: " + datas[i,0]
-                                    print str(j)+"-th sample: " + datas[j,0] + "\n"
-                                    corr = np.correlate(filtered_sample_i[:,c],
-                                                        filtered_sample_j[:,c])
-                                    
-                                    # The cross-correlation matrix is symmetric
-                                    train_xcorr[key][x,y] = train_xcorr[y,x] = corr
-                                except KeyboardInterrupt:
-                                    print "Interrupted!"
-                                    break
-                                except:
-                                    print "The file " + datas[j,0] + " is corrupted."
-                                    corrupted_list.append(j)
-                                    y = y - 1
-                                    continue
-                            y = y + 1
-                x = x + 1
-                    
-        # Save the cross-correlation matrices
-        joblib.dump(train_xcorr,'train_cross_correlation.pkl')
-    except KeyboardInterrupt:
-        print "Interrupted!"
+    for c in xrange(16):
+        key = "channel_%s" % (c+1)
+        train_xcorr[key] = np.zeros((N_TRAINING_SAMPLES,N_TRAINING_SAMPLES))
+    
+    for i in xrange(N_TRAINING_SAMPLES):
+        if corrupted_list.count(i) == 0:
+            # File not corrupted
+            corrupted_i = False
+            
+            # Load the i-th sample
+            file_dir = "../Seizures_Dataset/train_%s/" % datas[i,0][0]
+            file_path = file_dir + datas[i,0]
+            try:
+                sample_i = load_matdata(file_path)
+                # Band-pass filter (8-30 Hz)
+                fft_sample_i, freq_sample_i = get_and_filter_fft(sample_i)
+                filtered_sample_i = get_inverse_fft(fft_sample_i)
+            except KeyboardInterrupt:
+                print "Interrupted!"
+                break
+            except:
+                print "The file " + datas[i,0] + " is corrupted."
+                # The file must be corrupted
+                corrupted_i = True
+                corrupted_list.append(i)
+                continue
+            
+            if corrupted_i == False: # Check if the i-th file is corrupted
+                for j in xrange(i,N_TRAINING_SAMPLES):
+                    if corrupted_list.count(j) == 0:
+                        # Load the j-th sample
+                        file_dir = "../Seizures_Dataset/train_%s/" % datas[j,0][0]
+                        file_path = file_dir + datas[j,0]
+                        try:
+                            sample_j = load_matdata(file_path)
+                            # Band-pass filter (8-30 Hz)
+                            fft_sample_j, freq_sample_j = get_and_filter_fft(sample_j)
+                            filtered_sample_j = get_inverse_fft(fft_sample_j)
+                            
+                            for c in xrange(16):
+                                key = "channel_%s" % (c+1)
+                                # Correlation between the i-th sample and the j-th sample
+                                print key + " - Correlation between:"
+                                print str(i)+"-th sample: " + datas[i,0]
+                                print str(j)+"-th sample: " + datas[j,0] + "\n"
+                                corr = np.correlate(filtered_sample_i[:,c],
+                                                    filtered_sample_j[:,c])
+                                # The cross-correlation matrix is symmetric
+                                train_xcorr[key][i,j] = corr[0]
+                                train_xcorr[key][j,i] = corr[0]
+                        except KeyboardInterrupt:
+                            print "Interrupted!"
+                            break
+                        except:
+                            print "The file " + datas[j,0] + " is corrupted."
+                            corrupted_list.append(j)
+                            continue
+            
+    # Save the cross-correlation matrices
+    joblib.dump(train_xcorr,'fft_train_xcorr.pkl')
     
     return train_xcorr
 
 
+
+
 # ================================ MAIN ================================== #
-#train_xcorr = train_cross_correlation()
+fft_train_xcorr = train_cross_correlation()
 
 
