@@ -82,6 +82,9 @@ def train_cross_correlation():
                         # Band-pass filter (8-30 Hz)
                         fft_sample_i, freq_sample_i = get_and_filter_fft(sample_i)
                         filtered_sample_i = get_inverse_fft(fft_sample_i)
+                    except KeyboardInterrupt:
+                        print "Interrupted!"
+                        break
                     except:
                         print "The file " + datas[i,0] + " is corrupted."
                         # The file must be corrupted
@@ -104,11 +107,17 @@ def train_cross_correlation():
                                     filtered_sample_j = get_inverse_fft(fft_sample_j)
                                     
                                     # Correlation between the i-th sample and the j-th sample
+                                    print "Correlation between:"
+                                    print str(i)+"-th sample: " + datas[i,0]
+                                    print str(j)+"-th sample: " + datas[j,0] + "\n"
                                     corr = np.correlate(filtered_sample_i[:,c],
                                                         filtered_sample_j[:,c])
                                     
                                     # The cross-correlation matrix is symmetric
                                     train_xcorr[key][x,y] = train_xcorr[y,x] = corr
+                                except KeyboardInterrupt:
+                                    print "Interrupted!"
+                                    break
                                 except:
                                     print "The file " + datas[j,0] + " is corrupted."
                                     corrupted_list.append(j)
