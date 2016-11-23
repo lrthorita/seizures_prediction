@@ -17,45 +17,21 @@ N_SAMPLES_SEGMENT = 240000
 
 
 def load_matdata(filename):
-    """Take the mat file and convert it in a dictionary variable with the 
-    following keys: data, label (if it is a training data)."""
+    """Take the mat file and convert it in a numpy matrix variable with the 
+    datas from 16 channels (columns) and 240,000 elements (rows) each."""
     matdata = scipy.io.loadmat(filename)
-    dataStruct = matdata['dataStruct']
-    data = {}
-    data['data'] = dataStruct['data'][0,0]
-
-    if "train" in filename:
-        if "0." in filename:
-            data['label'] = 0
-        elif "1." in filename:
-            data['label'] = 1
+    data = matdata['dataStruct']['data'][0,0]
     return data
 
 
 def get_fft(data):
     """Compute the Fast Fourier Transform on the signal of each channel of the
     data, and return the histogram of frequencies energy."""
-    fft_data = np.fft.fft(data['data'],axis=0)
+    fft_data = np.fft.fft(data,axis=0)
     frequencies = np.fft.fftfreq(N_SAMPLES_SEGMENT,SAMPLING_PERIOD)
 
     return fft_data, frequencies
 
-
-#def get_feature(data):
-#    """Get the frequency range where alpha, beta and mu waves are situated.
-#    These waves are the waves that can, possibly, advise a future seizure 
-#    event. The frequency range is between 8 Hz and 30 Hz."""
-#    lower_index = np.int(8 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
-#    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
-#
-#    fft_data, frequencies = get_fft(data)
-#
-#    freq_range = frequencies[lower_index:higher_index]
-#    energy_range = fft_data[lower_index:higher_index]
-#
-#    fft_feature = {'frequency':freq_range, 'energy':energy_range}
-#
-#    return fft_feature
 
 def get_and_filter_fft(data):
     """Apply a band-pass filter in the range where alpha, beta and mu waves are
@@ -75,55 +51,81 @@ def get_inverse_fft(fft_data):
     """Recover the signal by applying the inverse Fourier Transform on the
     fft_data."""
     filtered_data = np.fft.ifft(fft_data,axis=0)
-    return filtered_data
-    
+    return filtered_data.real
 
-def get_train_dataset():
-    """Get all the training dataset and return it as a dictionary of all the 
-    examples and labels. It will return a dictionary with dictionaries as
-    elements. Each element corresponds to a unique .mat file. So, the structure
-    of the returned variable is as follows:
-        train_dataset
-            | ['1_1_0.mat']
-            |              |_ ['data']
-            |_             |_ ['label']
-            | [1_1_1.mat']
-            |              |_ ['data']
-            |_             |_ ['label']
-            ...
-    """
-    for i in xrange(2,3):
-        fft_train_dataset = {}
-        directory = '../Seizures_Dataset/train_%s/' % i
-        list_files = os.listdir(directory)
-        for j in xrange(len(list_files)):
-#        for j in xrange(1550,1600):
-            path = directory + list_files[j]
-            try:
-                data = load_matdata(path)
-                fft_feature = get_feature(data)
-                fft_train_dataset[list_files[j]] = {
-                                    'energy': fft_feature['energy'],
-                                    'label': data['label']}
-            except KeyboardInterrupt:
-                break
-            except:
-                print "The file " + list_files[j] + " is corrupted."
-                continue
-            if j%50 == 0: print j
-#            print j
-            fft_train_dataset['frequency'] = fft_feature['frequency']
+
+def train_cross_correlation():
+    """Compute the cross-correlation function for all the training dataset,
+    creating 16 correlation matrices. It returns a dictionary with keys as
+    'channel_i', where i is the channel number (1 to 16), and the respective
+    correlation matrix."""
+    datas = np.loadtxt('../Seizures_Dataset/train_and_test_data_labels_safe.csv',
+                       dtype='str', delimiter=',', skiprows=1, usecols=(0,1))
+    datas = datas[0:6042,:] # Eliminate the test datas
+    train_xcorr = {}
+    corrupted_list = []
+    try:
+        for c in xrange(16):
+            key = "channel_%s" % (c+1)
+            train_xcorr[key] = np.zeros((6042,6042))
+            x = y = 0
+            for i in xrange(6042):
+                if corrupted_list.count(i) == 0:
+                    # File not corrupted
+                    corrupted_i = False
+                    
+                    # Load the i-th sample
+                    file_dir = "../Seizures_Dataset/train_%s/" % datas[i,0][0]
+                    file_path = file_dir + datas[i,0]
+                    try:
+                        sample_i = load_matdata(file_path)
+                        # Band-pass filter (8-30 Hz)
+                        fft_sample_i, freq_sample_i = get_and_filter_fft(sample_i)
+                        filtered_sample_i = get_inverse_fft(fft_sample_i)
+                    except:
+                        print "The file " + datas[i,0] + " is corrupted."
+                        # The file must be corrupted
+                        corrupted_i = True
+                        corrupted_list.append(i)
+                        x = x - 1
+                        continue
+                    
+                    if corrupted_i == False: # Check if the i-th file is corrupted
+                        j = i
+                        for j in xrange(i,6042):
+                            if corrupted_list.count(j) == 0:
+                                # Load the j-th sample
+                                file_dir = "../Seizures_Dataset/train_%s/" % datas[j,0][0]
+                                file_path = file_dir + datas[j,0]
+                                try:
+                                    sample_j = load_matdata(file_path)
+                                    # Band-pass filter (8-30 Hz)
+                                    fft_sample_j, freq_sample_j = get_and_filter_fft(sample_j)
+                                    filtered_sample_j = get_inverse_fft(fft_sample_j)
+                                    
+                                    # Correlation between the i-th sample and the j-th sample
+                                    corr = np.correlate(filtered_sample_i[:,c],
+                                                        filtered_sample_j[:,c])
+                                    
+                                    # The cross-correlation matrix is symmetric
+                                    train_xcorr[key][x,y] = train_xcorr[y,x] = corr
+                                except:
+                                    print "The file " + datas[j,0] + " is corrupted."
+                                    corrupted_list.append(j)
+                                    y = y - 1
+                                    continue
+                            y = y + 1
+                x = x + 1
+                    
+        # Save the cross-correlation matrices
+        joblib.dump(train_xcorr,'train_cross_correlation.pkl')
+    except KeyboardInterrupt:
+        print "Interrupted!"
     
-        # Save the dataset
-        filename = 'fft_train_dataset%s.pkl' % i
-        filename = joblib.dump(fft_train_dataset,filename)
-        print "The training dataset was saved as: " + filename[0]
-        # Use the following command to load the training dataset:
-        """    joblib.load('fft_train_dataset.pkl')    """
-    return fft_train_dataset
+    return train_xcorr
 
 
 # ================================ MAIN ================================== #
-#train_dataset = get_train_dataset()
+train_xcorr = train_cross_correlation()
 
 
