@@ -14,7 +14,7 @@ from sklearn.externals import joblib
 IEEG_SAMPLING_RATE = 400
 SAMPLING_PERIOD = 1./400.
 N_SAMPLES_SEGMENT = 240000
-
+N_TRAINING_SAMPLES = 6042
 
 def load_matdata(filename):
     """Take the mat file and convert it in a numpy matrix variable with the 
@@ -61,15 +61,15 @@ def train_cross_correlation():
     correlation matrix."""
     datas = np.loadtxt('../Seizures_Dataset/train_and_test_data_labels_safe.csv',
                        dtype='str', delimiter=',', skiprows=1, usecols=(0,1))
-    datas = datas[0:6042,:] # Eliminate the test datas
+    datas = datas[0:N_TRAINING_SAMPLES,:] # Eliminate the test datas
     train_xcorr = {}
     corrupted_list = []
     try:
         for c in xrange(16):
             key = "channel_%s" % (c+1)
-            train_xcorr[key] = np.zeros((6042,6042))
+            train_xcorr[key] = np.zeros((N_TRAINING_SAMPLES,N_TRAINING_SAMPLES))
             x = y = 0
-            for i in xrange(6042):
+            for i in xrange(N_TRAINING_SAMPLES):
                 if corrupted_list.count(i) == 0:
                     # File not corrupted
                     corrupted_i = False
@@ -94,8 +94,7 @@ def train_cross_correlation():
                         continue
                     
                     if corrupted_i == False: # Check if the i-th file is corrupted
-                        j = i
-                        for j in xrange(i,6042):
+                        for j in xrange(i,N_TRAINING_SAMPLES):
                             if corrupted_list.count(j) == 0:
                                 # Load the j-th sample
                                 file_dir = "../Seizures_Dataset/train_%s/" % datas[j,0][0]
@@ -135,6 +134,6 @@ def train_cross_correlation():
 
 
 # ================================ MAIN ================================== #
-train_xcorr = train_cross_correlation()
+#train_xcorr = train_cross_correlation()
 
 
