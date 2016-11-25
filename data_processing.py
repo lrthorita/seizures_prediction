@@ -103,7 +103,7 @@ def get_and_filter_fft(data):
     return fft_data, frequencies
 
 
-def get_feature(data):
+def get_feature(data, min_freq, max_freq):
     """Get the frequency range where alpha, beta and mu waves are situated.
     These waves are the waves that can, possibly, advise a future seizure 
     event. The frequency range is between 8 Hz and 30 Hz."""
@@ -116,8 +116,8 @@ def get_feature(data):
 #        fft_feature[i,:] = abs(fft_data[i_index,:])/N_SAMPLES_SEGMENT
 #
 #    return fft_feature
-    lower_index = np.int(8 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
-    higher_index = np.int(30 * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
+    lower_index = np.int(min_freq * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE)
+    higher_index = np.int(max_freq * N_SAMPLES_SEGMENT / IEEG_SAMPLING_RATE) + 1
 
     fft_data, frequencies = get_fft(data)
 
@@ -289,4 +289,4 @@ def train_cross_correlation():
 #fft_train_xcorr = fft_train_cross_correlation()
 #train_xcorr = train_cross_correlation()
 
-feature_dataset = get_dataset('train')
+#feature_dataset = get_dataset('train')
