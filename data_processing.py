@@ -282,11 +282,22 @@ def train_cross_correlation():
     
     return train_xcorr
 
-
-
+def get_correlation_matrix():
+    feature_dataset = joblib.load('feature_train_dataset.pkl')
+    xcorr = {}
+    for c in xrange(1,17):
+        key = "channel_%s" % c
+        print "Computing correlation matrix of " + key
+        xcorr[key] = np.dot(np.transpose(feature_dataset[key]), feature_dataset[key])
+        print "Finished the " + key
+    print "Finished all! Now, saving..."
+    joblib.dump(xcorr, 'train_xcorrelation_matrix.pkl')
+    print "Saved in train_xcorrelation_matrix.pkl!"
+    return True
 
 # ================================ MAIN ================================== #
 #fft_train_xcorr = fft_train_cross_correlation()
 #train_xcorr = train_cross_correlation()
 
-feature_dataset = get_dataset('train')
+#feature_dataset = get_dataset('train')
+xcorr_success = get_correlation_matrix()
