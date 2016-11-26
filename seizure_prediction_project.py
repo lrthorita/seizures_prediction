@@ -6,6 +6,7 @@
 # University of Sao Paulo - Sao Carlos, SP, Brazil
 # *************************************************************************** #
 import numpy as np
+import matplotlib.pyplot as plt
 import scipy.io
 import os
 from sklearn import svm
@@ -17,7 +18,7 @@ IEEG_SAMPLING_RATE = 400
 SAMPLING_PERIOD = 1./400.
 N_SAMPLES_SEGMENT = 240000
 N_TRAINING_SAMPLES = 6042
-N_TEST_SAMPLES = 6126
+N_TEST_SAMPLES = 1908
 N_NEW_TEST_SAMPLES = 1908
 
 def load_matdata(filename):
@@ -161,23 +162,27 @@ def get_feature(data, half_bw=2):
     
 def get_features_dataset(mode):
     """Compute feature for every samples in the training dataset."""
-    datas = np.loadtxt('../Seizures_Dataset/train_and_test_data_labels_safe.csv',
-                       dtype='str', delimiter=',', skiprows=1, usecols=(0,1))
-    
     if mode == 'train':
+        datas = np.loadtxt('../Seizures_Dataset/train_and_test_data_labels_safe.csv',
+                       dtype='str', delimiter=',', skiprows=1, usecols=(0,1))
         N_SAMPLES = N_TRAINING_SAMPLES
         datas = datas[0:N_SAMPLES,:] # Eliminate the test datas
         directory = "../Seizures_Dataset/train_"
     elif mode == 'test':
-        N_SAMPLES = np.size(datas,0) - N_TRAINING_SAMPLES
-        datas = datas[N_TRAINING_SAMPLES:np.size(datas,0),:] # Eliminate the test datas
+        datas = np.loadtxt('../Seizures_Dataset/sample_submission.csv',
+                       dtype='str', delimiter=',', skiprows=1, usecols=(0,1))
+        N_SAMPLES = N_TEST_SAMPLES
         directory = "../Seizures_Dataset/test_"
     
     
     features_dataset = {}
     for i in xrange(N_SAMPLES):
         # Load the i-th sample
-        file_dir = directory + "%s/" % datas[i,0][0]
+        if mode == 'train':
+            file_dir = directory + "%s/" % datas[i,0][0]
+        elif mode == 'test':
+            file_dir = directory + "%s" % datas[i,0][4] + "_new/"
+        
         file_path = file_dir + datas[i,0]
         try:
             # Get the data
@@ -188,11 +193,13 @@ def get_features_dataset(mode):
             if features_dataset.has_key('features'):
                 features_dataset['features'] = np.r_[features_dataset['features'], feature]
                 features_dataset['filenames'].append(datas[i,0])
-                features_dataset['labels'].append(datas[i,1])
+                if mode == 'train':
+                    features_dataset['labels'].append(datas[i,1])
             else:
                 features_dataset['features'] = feature
                 features_dataset['filenames'] = [datas[i,0]]
-                features_dataset['labels'] = [datas[i,1]]
+                if mode == 'train':
+                    features_dataset['labels'] = [datas[i,1]]
             
             print str(i) + "-th feature added."
                 
@@ -216,16 +223,37 @@ def get_features_dataset(mode):
     return features_dataset
 
 
+def get_covariance(dataset, axis=1):
+    if axis == 0:
+        center_dataset = dataset['features'] - np.transpose([np.mean(dataset['features'],1)])
+        cov_matrix = np.dot(center_dataset, np.transpose(center_dataset))
+    elif axis == 1:
+        center_dataset = dataset['features'] - np.mean(dataset['features'],0)
+        cov_matrix = np.dot(np.transpose(center_dataset), center_dataset)
+
+    joblib.dump(cov_matrix, 'dataset_cov_matrix_%s' % axis)
+    return cov_matrix
+
+
+def get_eigens(cov_matrix):
+    eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
+    PC = range(np.size(eigenvectors,0))
+    plt.bar(PC, eigenvalues, 0.5)
+    return eigenvalues, eigenvectors
+
+
 def train_svm(dataset):
     # Create an object of SVC class
-    classifier = svm.SVC(C=0.1, kernel='poly', coef0=0.0, degree=2, tol = 0.001)
+    classifier = svm.SVC(C=2, kernel='poly', coef0=1, degree=2, tol = 0.001)
     
     # Divide the dataset in examples and labels
     examples = dataset['features']
     labels = dataset['labels']
     
     # Train the SVM Classifier to fit the dataset
+    print "Training classifier... It may take half a day or more."
     classifier.fit(examples, labels)
+    print "Your classifier is ready!"
     
     # Save the cross-correlation matrices
     filename = "trained_classifier.pkl"
@@ -236,19 +264,48 @@ def train_svm(dataset):
     return classifier
 
 
-def test_svm(dataset, classifier):
+def test_svm_score(dataset, classifier):
     # Divide the dataset in examples and labels
     examples = dataset['features']
     labels = dataset['labels']
 
     # Test classifier
-    training_accuracy = classifier.score(examples, labels)
-    print "The achieved training accuracy is: " + str(training_accuracy)
-    return training_accuracy
+    print "Testing your trained classifier..."
+    test_accuracy = classifier.score(examples, labels)
+    print "The achieved accuracy is: " + str(test_accuracy)
+    return test_accuracy
 
 
+def test_svm(dataset, classifier):
+    # Divide the dataset in examples and labels
+    examples = dataset['features']
+
+    # Test classifier
+    print "Testing your trained classifier..."
+    results = classifier.predict(examples)
+    print "It is finished! You can see the results in 'results' variable."
+    return results
+
+
+def create_csv_results(dataset, results):
+    filenames = np.transpose([dataset['filenames']])
+    results = np.transpose([results])
+    str_results = np.c_[filenames, results]
+    np.savetxt("lrthorita_submission.csv",
+               str_results,
+               fmt='%s,%s',
+               header='File,Class',
+               comments='')
+    return str_results
 
 # ================================ MAIN ================================== #
-features_train_dataset = get_features_dataset('train')
-
+#features_train_dataset = get_features_dataset('train')
+#features_test_dataset = get_features_dataset('test')
+#features_train_dataset = joblib.load('features_train_dataset.pkl')
+#features_test_dataset = joblib.load('features_test_dataset.pkl')
+#classifier = train_svm(features_train_dataset)
+#classifier = joblib.load('trained_classifier.pkl')
+#training_accuracy = test_svm_score(features_train_dataset, classifier)
+#results = test_svm(features_test_dataset, classifier)
+#str_results = create_csv_results(features_test_dataset,results)
 
