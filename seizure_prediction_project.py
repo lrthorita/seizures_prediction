@@ -256,14 +256,15 @@ def get_pc(dataset, n_pc=20):
 def get_pc_features(dataset, n_pc=20):
     principal_components, mean = get_pc(dataset, n_pc)
     center_dataset = dataset['features'] - mean
-    features = np.dot(center_dataset, principal_components)
+    pc_features = np.dot(center_dataset, principal_components)
+    features = {'features':pc_features,'labels':dataset['labels']}
     joblib.dump(features, 'principal_components.pkl')
     return features
 
 
 def train_svm(dataset):
     # Create an object of SVC class
-    classifier = svm.SVC(C=5, kernel='rbf', coef0=1, degree=3, gamma=1e-6, tol = 1e-6)
+    classifier = svm.SVC(C=300, kernel='poly', coef0=1, degree=2, gamma=1, tol = 1e-6)
     
     # Divide the dataset in examples and labels
     examples = dataset['features']
@@ -351,11 +352,22 @@ def get_performance(dataset,classifier):
 #features_test_dataset = get_features_dataset('test')
 features_train_dataset = joblib.load('features_train_dataset.pkl')
 features_test_dataset = joblib.load('features_test_dataset.pkl')
+features_train_dataset['features'] = features_train_dataset['features']/1000
+features_test_dataset['features'] = features_test_dataset['features']/1000
 
-principal_components, mean = get_pc(features_train_dataset,160)
-#classifier = train_svm(features_train_dataset)
+principal_components, mean = get_pc(features_train_dataset,20)
+#features = get_pc_features(features_train_dataset, 20)
+#classifier = train_svm(features)
 #classifier = joblib.load('trained_classifier.pkl')
-training_performance = get_performance(features_train_dataset, classifier)
-results = test_svm(features_test_dataset, classifier)
-str_results = create_csv_results(features_test_dataset,results)
+#training_performance = get_performance(features, classifier)
+#results = test_svm(features_test_dataset, classifier)
+#str_results = create_csv_results(features_test_dataset,results)
+
+
+# ============================== Study Space ================================ #
+#plt.plot(features[:,0],features[:,1],'o',
+#         features[1152:1301,0],features[1152:1301,1],'ro',
+#         features[3497:3647,0],features[3497:3647,1],'yo',
+#         features[5891:6041,0],features[5891:6041,1],'go')
+
 
