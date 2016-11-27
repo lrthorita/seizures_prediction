@@ -140,14 +140,14 @@ def get_feature(data, half_bw=2):
     # Get the feature vector for each of the 16 channels
     for i in xrange(10):
         # Apply Butterworth bandpass filter
-        f_center = 3*i + 8
+        f_center = 4*i + 5
         f_min = f_center - half_bw
         f_max = f_center + half_bw
         filtered_data = butterworth_bandpass_filter(data, 5, f_min, f_max)
         
         # Crop the spectral signal on the bandwidth region
-        min_freq = f_min - 3
-        max_freq = f_max + 3
+        min_freq = f_min - 2
+        max_freq = f_max + 2
         fft_cropped, freq_cropped = crop_spectrum(filtered_data, min_freq, max_freq)
         
         # Compute the approximated spectral energy
@@ -188,7 +188,7 @@ def get_features_dataset(mode):
             # Get the data
             data = load_matdata(file_path)
             # Compute the feature vector
-            feature = get_feature(data,2)
+            feature = get_feature(data,3)
             
             if features_dataset.has_key('features'):
                 features_dataset['features'] = np.r_[features_dataset['features'], feature]
@@ -225,21 +225,40 @@ def get_features_dataset(mode):
 
 def get_covariance(dataset, axis=1):
     if axis == 0:
-        center_dataset = dataset['features'] - np.transpose([np.mean(dataset['features'],1)])
+        mean = np.mean(dataset['features'],1)
+        center_dataset = dataset['features'] - np.transpose([mean])
         cov_matrix = np.dot(center_dataset, np.transpose(center_dataset))
     elif axis == 1:
-        center_dataset = dataset['features'] - np.mean(dataset['features'],0)
+        mean = np.mean(dataset['features'],0)
+        center_dataset = dataset['features'] - mean
         cov_matrix = np.dot(np.transpose(center_dataset), center_dataset)
 
     joblib.dump(cov_matrix, 'dataset_cov_matrix_%s' % axis)
-    return cov_matrix
+    return cov_matrix, mean
 
 
 def get_eigens(cov_matrix):
     eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
     PC = range(np.size(eigenvectors,0))
     plt.bar(PC, eigenvalues, 0.5)
+    plt.show()
     return eigenvalues, eigenvectors
+
+
+def get_pc(dataset, n_pc=20):
+    cov_matrix, mean = get_covariance(dataset, 1)
+    eigenvalues, eigenvectors = get_eigens(cov_matrix)
+    principal_components = eigenvectors[:,0:n_pc]
+    joblib.dump({'eigenvalues':eigenvalues, 'eigenvectors':eigenvectors}, 'eigens.pkl')
+    return principal_components, mean
+
+
+def get_pc_features(dataset, n_pc=20):
+    principal_components, mean = get_pc(dataset, n_pc)
+    center_dataset = dataset['features'] - mean
+    features = np.dot(center_dataset, principal_components)
+    joblib.dump(features, 'principal_components.pkl')
+    return features
 
 
 def train_svm(dataset):
@@ -332,9 +351,10 @@ def get_performance(dataset,classifier):
 #features_test_dataset = get_features_dataset('test')
 features_train_dataset = joblib.load('features_train_dataset.pkl')
 features_test_dataset = joblib.load('features_test_dataset.pkl')
-classifier = train_svm(features_train_dataset)
+
+principal_components, mean = get_pc(features_train_dataset,160)
+#classifier = train_svm(features_train_dataset)
 #classifier = joblib.load('trained_classifier.pkl')
-#training_accuracy = test_svm_score(features_train_dataset, classifier)
 training_performance = get_performance(features_train_dataset, classifier)
 results = test_svm(features_test_dataset, classifier)
 str_results = create_csv_results(features_test_dataset,results)
