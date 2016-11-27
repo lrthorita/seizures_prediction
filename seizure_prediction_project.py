@@ -136,11 +136,11 @@ def get_feature(data, half_bw=2):
     energy of these spectrals in a unique 10-dimension feature vector. Also, concatenate
     the feature vectors of the 16 channels in just one vector, resulting in a
     160-dimension feature vector."""
-    feature = np.zeros((1,112))
+    feature = np.zeros((1,160))
     # Get the feature vector for each of the 16 channels
-    for i in xrange(7):
+    for i in xrange(10):
         # Apply Butterworth bandpass filter
-        f_center = 5*i + 5
+        f_center = 4*i + 5
         f_min = f_center - half_bw
         f_max = f_center + half_bw
         filtered_data = butterworth_bandpass_filter(data, 5, f_min, f_max)
@@ -155,7 +155,7 @@ def get_feature(data, half_bw=2):
         
         # Save energy to the feature vector
         for c in xrange(16):
-            feature[0, 7*c + i] = energy[c]
+            feature[0, 10*c + i] = energy[c]
         
     return feature
     
@@ -248,7 +248,8 @@ def get_eigens(cov_matrix):
 def get_pc(dataset, n_pc=20):
     cov_matrix, mean = get_covariance(dataset, 1)
     eigenvalues, eigenvectors = get_eigens(cov_matrix)
-    principal_components = eigenvectors[:,0:20]
+    principal_components = eigenvectors[:,0:n_pc]
+    joblib.dump({'eigenvalues':eigenvalues, 'eigenvectors':eigenvectors}, 'eigens.pkl')
     return principal_components, mean
 
 
@@ -256,6 +257,7 @@ def get_pc_features(dataset, n_pc=20):
     principal_components, mean = get_pc(dataset, n_pc)
     center_dataset = dataset['features'] - mean
     features = np.dot(center_dataset, principal_components)
+    joblib.dump(features, 'principal_components.pkl')
     return features
 
 
@@ -318,6 +320,8 @@ def create_csv_results(dataset, results):
 # ================================ MAIN ================================== #
 features_train_dataset = get_features_dataset('train')
 features_test_dataset = get_features_dataset('test')
+
+principal_components, mean = get_pc(features_train_dataset,160)
 #features_train_dataset = joblib.load('features_train_dataset.pkl')
 #features_test_dataset = joblib.load('features_test_dataset.pkl')
 #classifier = train_svm(features_train_dataset)
