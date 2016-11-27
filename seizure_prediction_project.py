@@ -244,7 +244,7 @@ def get_eigens(cov_matrix):
 
 def train_svm(dataset):
     # Create an object of SVC class
-    classifier = svm.SVC(C=2, kernel='poly', coef0=1, degree=2, tol = 0.001)
+    classifier = svm.SVC(C=5, kernel='rbf', coef0=1, degree=3, gamma=1e-6, tol = 1e-6)
     
     # Divide the dataset in examples and labels
     examples = dataset['features']
@@ -298,14 +298,44 @@ def create_csv_results(dataset, results):
                comments='')
     return str_results
 
+
+def get_performance(dataset,classifier):
+    results = test_svm(dataset,classifier)
+    results = map(int,results)
+    labels = map(int,dataset['labels'])
+    TP = 0
+    FP = 0
+    FN = 0
+    P = 0
+    for i in xrange(len(labels)):
+        if labels[i] == 0:
+            if results[i] == 1:
+                FP = FP + 1
+        elif labels[i] == 1:
+            P = P + 1
+            if results[i] == 0:
+                FN = FN + 1
+            elif results[i] == 1:
+                TP = TP + 1
+    precision = float(TP) / (TP + FP)
+    recall = float(TP) / (P)
+    performance = {'precision':precision,
+                   'recall':recall,
+                   'TP':TP,
+                   'FP':FP,
+                   'FN':FN}
+    print "Precision = " + str(precision) + "  -  Recall = " + str(recall)
+    return performance
+
 # ================================ MAIN ================================== #
 #features_train_dataset = get_features_dataset('train')
 #features_test_dataset = get_features_dataset('test')
-#features_train_dataset = joblib.load('features_train_dataset.pkl')
-#features_test_dataset = joblib.load('features_test_dataset.pkl')
-#classifier = train_svm(features_train_dataset)
+features_train_dataset = joblib.load('features_train_dataset.pkl')
+features_test_dataset = joblib.load('features_test_dataset.pkl')
+classifier = train_svm(features_train_dataset)
 #classifier = joblib.load('trained_classifier.pkl')
 #training_accuracy = test_svm_score(features_train_dataset, classifier)
-#results = test_svm(features_test_dataset, classifier)
-#str_results = create_csv_results(features_test_dataset,results)
+training_performance = get_performance(features_train_dataset, classifier)
+results = test_svm(features_test_dataset, classifier)
+str_results = create_csv_results(features_test_dataset,results)
 
